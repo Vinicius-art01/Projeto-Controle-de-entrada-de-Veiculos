@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Editar Registro — Filial {{ filial }}{% endblock %}
+
+{% block content %}
+<h2 class="text-center mb-4">Editar Registro #{{ registro.ordem }} — {{ filial }}</h2>
+
+<div class="card mb-4 p-4" style="max-width:600px; margin: 0 auto;">
+  <form method="POST" class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label">Tipo do Veículo</label>
+      <input name="tipo_veiculo" class="form-control" required
+             value="{{ registro.tipo }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Placa</label>
+      <input name="placa" class="form-control" maxlength="7" required
+             value="{{ registro.placa }}">
+    </div>
+
+    <div class="col-12">
+      <label class="form-label">Serviços</label>
+      <div class="d-flex flex-wrap">
+        {% for key,label in [
+          ('oleo','Óleo'),
+          ('filtro_oleo','Filtro de Óleo'),
+          ('filtro_combustivel','Filtro de Combustível'),
+          ('filtro_ar_motor','Filtro Ar Motor'),
+          ('filtro_ar_condicionado','Filtro Ar Condicionado'),
+          ('diferencial','Diferencial'),
+          ('caixa','Caixa')
+        ] %}
+        <div class="form-check me-3 mb-2">
+          <input class="form-check-input" type="checkbox" id="{{ key }}" name="{{ key }}"
+                 {% if registro[key] %}checked{% endif %}>
+          <label class="form-check-label" for="{{ key }}">{{ label }}</label>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Cliente</label>
+      <input name="cliente" class="form-control"
+             value="{{ registro.cliente }}">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Trocador</label>
+      <input name="trocador" class="form-control"
+             value="{{ registro.trocador }}">
+    </div>
+
+    <div class="col-12 d-flex justify-content-between">
+      <a href="{{ url_for('filial_view', filial=filial) }}"
+         class="btn btn-secondary">Cancelar</a>
+      <button class="btn btn-success">Salvar Alterações</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

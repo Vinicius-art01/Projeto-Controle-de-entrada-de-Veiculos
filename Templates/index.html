@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Controle de Veículos por Filial</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .flashes {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 300px;
+        }
+        .alert {
+            transition: opacity 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container py-4">
+    <!-- Área para mensagens flash -->
+    <div class="flashes">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <h1 class="text-center mb-4">Controle de Veículos</h1>
+
+    <!-- Navegação entre filiais -->
+    <div class="d-flex justify-content-center mb-4">
+        {% for f in filiais %}
+        <a href="{{ url_for('filial_view', filial=f) }}" class="btn {% if f==filial %}btn-primary{% else %}btn-outline-primary{% endif %} mx-1">{{ f }}</a>
+        {% endfor %}
+    </div>
+
+    <!-- Formulário de registro -->
+    <div class="card mx-auto mb-4" style="max-width: 600px;">
+        <div class="card-body">
+            <h5 class="card-title text-center">Registrar Veículo - {{ filial }}</h5>
+            <form method="POST" action="{{ url_for('filial_view', filial=filial) }}">
+                <div class="mb-3">
+                    <label class="form-label">Placa</label>
+                    <input type="text" name="placa" class="form-control" placeholder="ABC1234" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Tipo do Veículo</label>
+                    <input type="text" name="tipo_veiculo" class="form-control" placeholder="Ex: Caminhão, Carreta" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Cliente</label>
+                    <input type="text" name="cliente" class="form-control" placeholder="Nome do cliente">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Trocador</label>
+                    <input type="text" name="trocador" class="form-control" placeholder="Nome do trocador">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Serviços:</label>
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="oleo" id="oleo">
+                            <label class="form-check-label" for="oleo">Óleo</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="filtro_oleo" id="filtro_oleo">
+                            <label class="form-check-label" for="filtro_oleo">Filtro de Óleo</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="filtro_combustivel" id="filtro_combustivel">
+                            <label class="form-check-label" for="filtro_combustivel">Filtro de Combustível</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="filtro_ar_motor" id="filtro_ar_motor">
+                            <label class="form-check-label" for="filtro_ar_motor">Filtro de Ar do Motor</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="filtro_ar_condicionado" id="filtro_ar_condicionado">
+                            <label class="form-check-label" for="filtro_ar_condicionado">Filtro de Ar Condicionado</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="diferencial" id="diferencial">
+                            <label class="form-check-label" for="diferencial">Diferencial</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="caixa" id="caixa">
+                            <label class="form-check-label" for="caixa">Caixa</label>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-success w-100">Adicionar à Fila</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabela da fila -->
+    <div class="table-responsive">
+        <h2 class="mb-3">Fila de Atendimento - {{ filial }}</h2>
+        {% if fila %}
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Ordem</th>
+                        <th>Placa</th>
+                        <th>Tipo</th>
+                        <th>Cliente</th>
+                        <th>Serviços</th>
+                        <th>Vendedor</th>
+                        <th>Entrada</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in fila %}
+                    <tr>
+                        <td>{{ v.ordem }}</td>
+                        <td>{{ v.placa }}</td>
+                        <td>{{ v.tipo }}</td>
+                        <td>{{ v.cliente or '-' }}</td>
+                        <td>
+                            {% for servico in ['oleo','filtro_oleo','filtro_combustivel','filtro_ar_motor','filtro_ar_condicionado','diferencial','caixa'] %}
+                                {% if v[servico] %}
+                                    <span class="badge bg-primary">{{ servico.replace('_', ' ').title() }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>{{ v.vendedor }}</td>
+                        <td>{{ datetime.fromisoformat(v.hora_entrada).strftime('%H:%M') }}</td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{{ url_for('editar_registro', filial=filial, ordem=v.ordem) }}" class="btn btn-sm btn-warning">Editar</a>
+                                <form method="POST" action="{{ url_for('liberar', filial=filial, ordem=v.ordem) }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">Liberar</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="alert alert-info text-center">
+                Nenhum veículo na fila de atendimento
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Fechar automaticamente as mensagens flash após 5 segundos
+  document.addEventListener("DOMContentLoaded", function() {
+    const alerts = document.querySelectorAll('.alert');
+    
+    alerts.forEach(function(alert) {
+      setTimeout(function() {
+        const bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+      }, 5000);
+    });
+  });
+</script>
+</body>
+</html>

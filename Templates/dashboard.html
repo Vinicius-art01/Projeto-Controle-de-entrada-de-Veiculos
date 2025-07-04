@@ -1,0 +1,303 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard — Controle{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h2 class="mb-2">Painel de Controle</h2>
+    
+    <div class="d-flex gap-2">
+      {% if user_role == 'admin' %}
+      <div class="filial-filter">
+        <form method="get" class="d-flex">
+          <select name="filial" class="form-select me-2" onchange="this.form.submit()">
+            <option value="">Todas as Filiais</option>
+            {% for filial in todas_filiais %}
+            <option value="{{ filial }}" {% if filial_selecionada==filial %}selected{% endif %}>{{ filial }}</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+      {% endif %}
+      
+      <form method="get" class="d-flex">
+        <select name="periodo" class="form-select" onchange="this.form.submit()">
+          <option value="7" {% if periodo_selecionado == 7 %}selected{% endif %}>Últimos 7 dias</option>
+          <option value="15" {% if periodo_selecionado == 15 %}selected{% endif %}>Últimos 15 dias</option>
+          <option value="30" {% if periodo_selecionado == 30 %}selected{% endif %}>Últimos 30 dias</option>
+        </select>
+      </form>
+      
+      <a href="{{ url_for('exportar_pdf') }}" class="btn btn-outline-danger">
+        <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
+      </a>
+    </div>
+  </div>
+
+  <!-- Resumo Filial e Período -->
+  <div class="alert alert-info mb-4">
+    <i class="bi bi-info-circle me-2"></i> Exibindo dados 
+    {% if filial_selecionada %}da filial <strong>{{ filial_selecionada }}</strong>{% else %}de <strong>todas as filiais</strong>{% endif %}
+    dos últimos <strong>{{ periodo_selecionado }} dias</strong>
+  </div>
+
+  <!-- KPIs Principais -->
+  <div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title text-muted">Veículos na Fila</h5>
+          <p class="card-text display-5 fw-bold text-primary">{{ total_fila }}</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title text-muted">Serviços em Aberto</h5>
+          <p class="card-text display-5 fw-bold text-warning">{{ total_servicos }}</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title text-muted">Reincidências</h5>
+          <p class="card-text display-5 fw-bold text-danger">{{ total_reincidencias }}</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3 col-6 mb-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body text-center">
+          <h5 class="card-title text-muted">Tempo Médio</h5>
+          <p class="card-text display-5 fw-bold text-success">{{ "%.1f"|format(tempo_medio_minutos) }} min</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos e Métricas -->
+  <div class="row">
+    <!-- Gráfico Atendimentos -->
+    <div class="col-lg-6 mb-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Atendimentos (Últimos {{ periodo_selecionado }} dias)</h5>
+          <div style="height: 250px;">
+            <canvas id="graficoAtendimentos"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Gráfico Serviços -->
+    <div class="col-lg-6 mb-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Distribuição de Serviços</h5>
+          <div style="height: 250px;">
+            <canvas id="graficoServicos"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Métricas Adicionais -->
+  <div class="row mt-4">
+    <!-- Top Vendedores -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Top Vendedores</h5>
+          <ul class="list-group">
+            {% for vendedor, total in top_vendedores %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ vendedor }}</span>
+              <span class="badge bg-primary rounded-pill">{{ total }}</span>
+            </li>
+            {% else %}
+            <li class="list-group-item">Nenhum dado disponível</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Trocador Reincidente -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Trocador com Mais Reincidências</h5>
+          <div class="text-center py-4">
+            <h3 class="text-danger">{{ trocador_mais_reincidente[0] }}</h3>
+            <p class="display-4 fw-bold">{{ trocador_mais_reincidente[1] }}</p>
+            <p class="text-muted">ocorrências registradas</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Tabela Filiais (apenas admin) -->
+  {% if contador_filiais %}
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Atendimentos por Filial</h5>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Filial</th>
+                  <th class="text-end">Atendimentos</th>
+                  <th class="text-end">% do Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% set total_geral = contador_filiais.values()|sum %}
+                {% for filial, total in contador_filiais.most_common() %}
+                <tr>
+                  <td>{{ filial }}</td>
+                  <td class="text-end">{{ total }}</td>
+                  <td class="text-end">{{ "%.1f"|format(total / total_geral * 100) }}%</td>
+                </tr>
+                {% endfor %}
+                <tr class="fw-bold">
+                  <td>Total Geral</td>
+                  <td class="text-end">{{ total_geral }}</td>
+                  <td class="text-end">100%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Gráfico de Atendimentos
+  const ctxAtendimentos = document.getElementById('graficoAtendimentos');
+  if (ctxAtendimentos) {
+    new Chart(ctxAtendimentos, {
+      type: 'bar',
+      data: {
+        labels: {{ ultima_semana_labels|tojson }},
+        datasets: [{
+          label: 'Atendimentos Realizados',
+          data: {{ ultima_semana_values|tojson }},
+          backgroundColor: 'rgba(32, 201, 151, 0.7)',
+          borderColor: 'rgba(32, 201, 151, 1)',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              precision: 0,
+              stepSize: 1
+            }
+          },
+          x: {
+            grid: {
+              display: false
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Gráfico de Serviços (Pizza)
+  const ctxServicos = document.getElementById('graficoServicos');
+  if (ctxServicos) {
+    const cores = [
+      'rgba(255, 99, 132, 0.7)',
+      'rgba(54, 162, 235, 0.7)',
+      'rgba(255, 206, 86, 0.7)',
+      'rgba(75, 192, 192, 0.7)',
+      'rgba(153, 102, 255, 0.7)',
+      'rgba(255, 159, 64, 0.7)',
+      'rgba(199, 199, 199, 0.7)'
+    ];
+    
+    // Preparar os dados
+    const servicos = {{ servicos_mais_requisitados|map(attribute='0')|list|tojson }};
+    const valores = {{ servicos_mais_requisitados|map(attribute='1')|list|tojson }};
+    
+    new Chart(ctxServicos, {
+      type: 'doughnut',
+      data: {
+        labels: servicos,
+        datasets: [{
+          data: valores,
+          backgroundColor: cores,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.raw || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = Math.round((value / total) * 100);
+                return `${label}: ${value} (${percentage}%)`;
+              }
+            }
+          },
+          legend: {
+            position: 'right',
+            labels: {
+              generateLabels: function(chart) {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map((label, i) => {
+                    const value = data.datasets[0].data[i];
+                    const meta = chart.getDatasetMeta(0);
+                    
+                    return {
+                      // Formato: [cor] valor nome
+                      text: `${value} ${label}`,
+                      fillStyle: data.datasets[0].backgroundColor[i],
+                      strokeStyle: '#000',
+                      lineWidth: 1,
+                      hidden: isNaN(value) || meta.data[i].hidden,
+                      index: i,
+                      fontColor: '#333',
+                      fontSize: 12
+                    };
+                  });
+                }
+                return [];
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

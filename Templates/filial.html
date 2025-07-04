@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Fila {{ filial }} — Controle{% endblock %}
+
+{% block content %}
+<h2 class="text-center mb-4">Filial: {{ filial }}</h2>
+
+<div class="card mb-4 p-4">
+  <form method="POST" class="row">
+    <!-- Coluna esquerda: Informações do veículo -->
+    <div class="col-md-6">
+      <div class="mb-3">
+        <label class="form-label">Tipo do Veículo</label>
+        <input name="tipo_veiculo" class="form-control form-control-sm" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Placa</label>
+        <input name="placa" id="placa-input" class="form-control form-control-sm" maxlength="7" required>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Cliente</label>
+        <input name="cliente" class="form-control form-control-sm">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Trocador</label>
+        <input name="trocador" class="form-control form-control-sm">
+      </div>
+    </div>
+
+    <!-- Coluna direita: Serviços e botão -->
+    <div class="col-md-6 d-flex flex-column justify-content-between">
+      <div class="mb-3">
+        <label class="form-label">Serviços</label>
+        <div class="d-flex flex-wrap gap-2">
+          {% for key, label in [
+            ('oleo','Óleo'),
+            ('filtro_oleo','Filtro de Óleo'),
+            ('filtro_combustivel','Filtro de Combustível'),
+            ('filtro_ar_motor','Filtro Ar Motor'),
+            ('filtro_ar_condicionado','Filtro Ar Condicionado'),
+            ('diferencial','Diferencial'),
+            ('caixa','Caixa')
+          ] %}
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="{{ key }}" name="{{ key }}">
+            <label class="form-check-label" for="{{ key }}">{{ label }}</label>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="text-end">
+        <button class="btn btn-success px-4">Adicionar</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Tabela de fila -->
+<div class="table-responsive" style="overflow-x: auto;">
+  <table class="table table-hover table-bordered text-center" style="font-size: .85rem; table-layout: auto; width: 100%;">
+    <thead>
+      <tr>
+        <th>Ordem</th>
+        <th>Tipo do Veículo</th>
+        <th>Placa</th>
+        <th>Óleo</th>
+        <th>Filtro de Óleo</th>
+        <th>Filtro de Combustível</th>
+        <th>Filtro de Ar Motor</th>
+        <th>Filtro de Ar Condicionado</th>
+        <th>Diferencial</th>
+        <th>Caixa</th>
+        <th>Vendedor</th>
+        <th>Cliente</th>
+        <th>Trocador</th>
+        <th>Hora</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in fila %}
+      <tr>
+        <td>{{ v.ordem }}</td>
+        <td>{{ v.tipo }}</td>
+        <td>{{ v.placa }}</td>
+        <td>{% if v.oleo %}✓{% endif %}</td>
+        <td>{% if v.filtro_oleo %}✓{% endif %}</td>
+        <td>{% if v.filtro_combustivel %}✓{% endif %}</td>
+        <td>{% if v.filtro_ar_motor %}✓{% endif %}</td>
+        <td>{% if v.filtro_ar_condicionado %}✓{% endif %}</td>
+        <td>{% if v.diferencial %}✓{% endif %}</td>
+        <td>{% if v.caixa %}✓{% endif %}</td>
+        <td>{{ v.vendedor }}</td>
+        <td>{{ v.cliente }}</td>
+        <td>{{ v.trocador }}</td>
+        <td>{{ v.hora }}</td>
+        <td>
+          <div class="d-flex justify-content-center gap-1">
+            <a href="{{ url_for('editar_registro', filial=filial, ordem=v.ordem) }}" class="btn btn-outline-primary btn-sm" title="Editar">✏️</a>
+            <form method="POST" action="{{ url_for('liberar', filial=filial, ordem=v.ordem) }}">
+              <button type="submit" class="btn btn-outline-danger btn-sm" title="Liberar">🗑️</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Validação de placa em tempo real -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const input = document.getElementById('placa-input');
+  input.addEventListener('input', function () {
+    let raw = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    let formatted = '';
+    for (let i = 0; i < raw.length && i < 7; i++) {
+      const c = raw[i];
+      if (i < 3) {
+        if (/[A-Z]/.test(c)) formatted += c;
+      } else if (i === 3) {
+        if (/[0-9]/.test(c)) formatted += c;
+      } else if (i === 4) {
+        if (/[A-Z0-9]/.test(c)) formatted += c;
+      } else {
+        if (/[0-9]/.test(c)) formatted += c;
+      }
+    }
+    input.value = formatted;
+  });
+});
+</script>
+{% endblock %}

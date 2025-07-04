@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block title %}Histórico de Liberações — Controle{% endblock %}
+
+{% block content %}
+<h2 class="text-center mb-4">Histórico de Liberações</h2>
+
+<!-- Botão de Voltar -->
+<div class="mb-3">
+  <button class="btn btn-secondary" onclick="window.history.back()">⬅ Voltar</button>
+</div>
+
+<form class="row g-3 mb-4" method="get">
+  <div class="col-md-3">
+    <input name="placa" class="form-control" placeholder="Buscar por placa..." value="{{ placa_filtro }}">
+  </div>
+  <div class="col-md-3">
+    <input name="vendedor" class="form-control" placeholder="Buscar por vendedor..." value="{{ vendedor_filtro }}">
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <button class="btn btn-primary w-100">Filtrar</button>
+  </div>
+</form>
+
+<div class="full-bleed">
+  <div class="table-responsive" style="position:relative;left:50%;right:50%;width:100vw;margin-left:-50vw;margin-right:-50vw;overflow-x:auto;">
+    <table class="table table-hover table-bordered text-center">
+      <thead>
+        <tr>
+          <th>Filial</th>
+          <th>Ordem</th>
+          <th>Tipo</th>
+          <th>Placa</th>
+          <th>Óleo</th>
+          <th>Filtro de Óleo</th>
+          <th>Filtro de Combustível</th>
+          <th>Filtro Ar Motor</th>
+          <th>Filtro Ar Condicionado</th>
+          <th>Diferencial</th>
+          <th>Caixa</th>
+          <th>Vendedor</th>
+          <th>Cliente</th>
+          <th>Trocador</th>
+          <th>Hora de Liberação</th>
+          <th>Reincidência</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in registros %}
+        <tr {% if r.reincidencia %} style="cursor:pointer; background-color:#fff3cd;" onclick="abrirDetalhes('{{ loop.index0 }}')" {% endif %}>
+          <td>{{ r.filial }}</td>
+          <td>{{ r.ordem }}</td>
+          <td>{{ r.tipo }}</td>
+          <td>{{ r.placa }}</td>
+          <td>{% if r.oleo %}✓{% endif %}</td>
+          <td>{% if r.filtro_oleo %}✓{% endif %}</td>
+          <td>{% if r.filtro_combustivel %}✓{% endif %}</td>
+          <td>{% if r.filtro_ar_motor %}✓{% endif %}</td>
+          <td>{% if r.filtro_ar_condicionado %}✓{% endif %}</td>
+          <td>{% if r.diferencial %}✓{% endif %}</td>
+          <td>{% if r.caixa %}✓{% endif %}</td>
+          <td>{{ r.vendedor }}</td>
+          <td>{{ r.cliente }}</td>
+          <td>{{ r.trocador }}</td>
+          <td>{{ r.liberado_em[:19].replace('T',' ') }}</td>
+          <td>
+            {% if user_role in ['admin', 'rep'] %}
+              {% if not r.reincidencia %}
+                <button class="btn btn-warning btn-sm" onclick="event.stopPropagation(); abrirModalReincidencia('{{ r.placa }}','{{ r.liberado_em }}')">Reincidência</button>
+              {% else %}
+                <span class="badge bg-info">Registrado</span>
+              {% endif %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal Registrar Reincidência -->
+<div class="modal" id="modalReincidencia" style="display:none;">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <div class="modal-header">
+        <h5 class="modal-title">Registrar Reincidência</h5>
+        <button type="button" class="btn-close" onclick="fecharModal()"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="inputPlaca">
+        <input type="hidden" id="inputLiberadoEm">
+        <div class="mb-3">
+          <label class="form-label">Justificativa:</label>
+          <textarea id="inputJustificativa" class="form-control" rows="3" required></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="enviarReincidencia()">Enviar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Detalhes -->
+{% for r in registros %}
+  {% if r.reincidencia %}
+  <div class="modal" id="modalDetalhes-{{ loop.index0 }}" style="display:none;">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content shadow-lg rounded">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title">Detalhes da Solicitação</h5>
+          <button type="button" class="btn-close btn-close-white" onclick="fecharDetalhes('{{ loop.index0 }}')"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row mb-2"><div class="col"><strong>Filial:</strong> {{ r.filial }}</div><div class="col"><strong>Ordem:</strong> {{ r.ordem }}</div></div>
+          <div class="row mb-2"><div class="col"><strong>Tipo:</strong> {{ r.tipo }}</div><div class="col"><strong>Placa:</strong> {{ r.placa }}</div></div>
+          <div class="row mb-2"><div class="col"><strong>Vendedor:</strong> {{ r.vendedor }}</div><div class="col"><strong>Cliente:</strong> {{ r.cliente }}</div></div>
+          <div class="row mb-2"><div class="col"><strong>Trocador:</strong> {{ r.trocador }}</div><div class="col"><strong>Hora:</strong> {{ r.liberado_em[:19].replace('T',' ') }}</div></div>
+          <hr>
+          <h6 class="text-primary">Reincidência</h6>
+          <p><strong>Por:</strong> {{ r.reincidencia.autor }}</p>
+          <p><strong>Data:</strong> {{ r.reincidencia.registrado_em[:19].replace('T',' ') }}</p>
+          <p><strong>Justificativa:</strong><br>{{ r.reincidencia.justificativa }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+{% endfor %}
+
+<style>
+.modal { position: fixed; z-index:10000; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; }
+.modal-dialog { max-width:700px; width:90%; }
+.modal-content { background:#fff; border-radius:8px; }
+.modal-header { padding:1rem; }
+.modal-body { padding:1rem; }
+.modal-footer { padding:1rem; }
+</style>
+
+<script>
+function abrirModalReincidencia(placa, liberadoEm) {
+  document.getElementById('inputPlaca').value = placa;
+  document.getElementById('inputLiberadoEm').value = liberadoEm;
+  document.getElementById('modalReincidencia').style.display = 'flex';
+}
+
+function fecharModal() {
+  document.getElementById('modalReincidencia').style.display = 'none';
+  document.getElementById('inputJustificativa').value = '';
+}
+
+function enviarReincidencia() {
+  const placa = document.getElementById('inputPlaca').value;
+  const liberado_em = document.getElementById('inputLiberadoEm').value;
+  const justificativa = document.getElementById('inputJustificativa').value.trim();
+  if (!justificativa) {
+    alert('Preencha a justificativa!');
+    return;
+  }
+  fetch('/registrar_reincidencia', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ placa: placa, liberado_em: liberado_em, justificativa: justificativa })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Reincidência registrada com sucesso!');
+      location.reload();
+    } else {
+      alert('Erro: ' + data.error);
+    }
+  });
+}
+
+function abrirDetalhes(index) {
+  document.getElementById('modalDetalhes-' + index).style.display = 'flex';
+}
+
+function fecharDetalhes(index) {
+  document.getElementById('modalDetalhes-' + index).style.display = 'none';
+}
+</script>
+{% endblock %}

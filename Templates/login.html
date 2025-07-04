@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}Login — Gerenciamento de Veículos{% endblock %}
+
+{% block content %}
+<div class="row vh-100 gx-0 align-items-start" style="padding-top: 15vh;">
+  <!-- Painel esquerdo: logo + título -->
+  <div class="col-md-7 d-none d-md-flex align-items-center justify-content-center bg-light">
+    <div class="text-center p-4">
+      <img src="{{ url_for('static', filename='logo-cedep.png') }}"
+           alt="CEDEP" class="img-fluid mb-4" style="max-height: 200px;">
+      <h1 class="h3 fw-semibold">Gerenciamento de Veículos</h1>
+    </div>
+  </div>
+
+  <!-- Painel direito: formulário -->
+  <div class="col-md-5 d-flex align-items-start justify-content-center">
+    <div style="width: 100%; max-width: 360px;">
+      <!-- Mensagens de erro apenas -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            {% if category == 'danger' %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="card shadow-sm p-4">
+        <h2 class="text-center mb-4">Entrar</h2>
+        <form method="POST" autocomplete="off">
+          <div class="mb-3">
+            <label for="matricula" class="form-label">Matrícula</label>
+            <input id="matricula" name="matricula" class="form-control" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label for="senha" class="form-label">Senha</label>
+            <input id="senha" type="password" name="senha" class="form-control" required>
+          </div>
+          <button class="btn btn-success w-100">Entrar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
